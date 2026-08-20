@@ -62,7 +62,7 @@ services:
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "${WEB_HOST_PORT:-8000}:8000"
     volumes:
       - ./src:/usr/src/app/src
     depends_on:
