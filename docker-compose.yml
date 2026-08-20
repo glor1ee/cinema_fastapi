@@ -1,0 +1,118 @@
+services:
+  db:
+    image: postgres:16
+    container_name: cinema_db
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_cinema_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - cinema_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cinema_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cinema_network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: cinema_mailhog
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - cinema_network
+
+  migrator:
+    build: .
+    container_name: cinema_migrator
+    command: ["/bin/bash", "./commands/run_migration.sh"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cinema_network
+
+  web:
+    build: .
+    container_name: cinema_web
+    restart: always
+    command: ["/bin/bash", "./commands/run_web_server_dev.sh"]
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/usr/src/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - cinema_network
+
+  celery_worker:
+    build: .
+    container_name: cinema_celery_worker
+    restart: always
+    command: ["/bin/bash", "./commands/run_celery_worker.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./src:/usr/src/app/src
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    networks:
+      - cinema_network
+
+  celery_beat:
+    build: .
+    container_name: cinema_celery_beat
+    restart: always
+    command: ["/bin/bash", "./commands/run_celery_beat.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./src:/usr/src/app/src
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery_worker:
+        condition: service_started
+    networks:
+      - cinema_network
+
+volumes:
+  postgres_cinema_data:
+    driver: local
+
+networks:
+  cinema_network:
+    driver: bridge

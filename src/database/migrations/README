@@ -1,0 +1,8 @@
+Alembic migrations for the Online Cinema database.
+
+The connection URL is built from application settings inside env.py, so it is
+never duplicated here.
+
+    alembic revision --autogenerate -m "describe the change"
+    alembic upgrade head
+    alembic downgrade -1
