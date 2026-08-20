@@ -1,0 +1,18 @@
+services:
+  web:
+    ports:
+      - "8001:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  migrator:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  celery_worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  celery_beat:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
