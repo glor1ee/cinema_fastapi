@@ -300,6 +300,45 @@ async def test_refresh_rejects_a_malformed_token(client):
 
 
 @pytest.mark.asyncio
+async def test_refresh_rotates_the_refresh_token(client, db_session, seed_user_groups):
+    await _make_user(db_session, "active@example.com")
+    login = await client.post(LOGIN_URL, json={"email": "active@example.com", "password": PASSWORD})
+    old_refresh_token = login.json()["refresh_token"]
+
+    first = await client.post(REFRESH_URL, json={"refresh_token": old_refresh_token})
+    assert first.status_code == 200
+    new_refresh_token = first.json()["refresh_token"]
+    assert new_refresh_token != old_refresh_token
+
+    reuse = await client.post(REFRESH_URL, json={"refresh_token": old_refresh_token})
+    assert reuse.status_code == 401
+
+    second = await client.post(REFRESH_URL, json={"refresh_token": new_refresh_token})
+    assert second.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_a_token_expired_in_the_database(
+    client, db_session, seed_user_groups
+):
+    user = await _make_user(db_session, "active@example.com")
+    login = await client.post(LOGIN_URL, json={"email": "active@example.com", "password": PASSWORD})
+    refresh_token = login.json()["refresh_token"]
+
+    result = await db_session.execute(
+        select(RefreshTokenModel).where(RefreshTokenModel.user_id == user.id)
+    )
+    token_record = result.scalars().first()
+    token_record.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    await db_session.commit()
+
+    response = await client.post(REFRESH_URL, json={"refresh_token": refresh_token})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Refresh token has expired."
+
+
+@pytest.mark.asyncio
 async def test_password_reset_request_is_silent_about_unknown_emails(
     client, seed_user_groups, email_sender_stub
 ):

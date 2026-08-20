@@ -22,7 +22,7 @@ class OrderSchema(BaseModel):
     user_id: int
     created_at: datetime
     status: OrderStatusEnum
-    total_amount: Decimal | None
+    total_amount: Decimal
     items: list[OrderItemSchema]
 
 

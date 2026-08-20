@@ -8,13 +8,12 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from config import require_moderator
 from database import (
+    CartItemModel,
     CertificationModel,
     DirectorModel,
     GenreModel,
     MovieModel,
     OrderItemModel,
-    OrderModel,
-    OrderStatusEnum,
     StarModel,
     UserModel,
     get_db,
@@ -363,12 +362,13 @@ async def update_movie(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a movie",
     description=(
-        "Moderators and admins only. A movie that appears in at least one paid "
-        "order cannot be deleted, because removing it would corrupt the purchase "
-        "history."
+        "Moderators and admins only. A movie referenced by any order, at any "
+        "status, or sitting in someone's cart cannot be deleted: the foreign "
+        "key from order items cascades, and deleting it anyway would silently "
+        "corrupt that order's history."
     ),
     responses={
-        400: {"description": "The movie was already bought by someone."},
+        400: {"description": "The movie is referenced by an order or a cart."},
         403: {"description": "Caller is not a moderator or admin."},
         404: {"description": "No movie with this ID."},
     },
@@ -380,18 +380,22 @@ async def delete_movie(
 ) -> None:
     movie = await _load_movie_or_404(db, movie_id)
 
-    purchased = await db.execute(
-        select(func.count(OrderItemModel.id))
-        .join(OrderModel, OrderItemModel.order_id == OrderModel.id)
-        .where(
-            OrderItemModel.movie_id == movie_id,
-            OrderModel.status == OrderStatusEnum.PAID,
-        )
+    ordered = await db.execute(
+        select(func.count(OrderItemModel.id)).where(OrderItemModel.movie_id == movie_id)
     )
-    if purchased.scalar_one() > 0:
+    if ordered.scalar_one() > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This movie has already been purchased and cannot be deleted.",
+            detail="This movie is part of an order and cannot be deleted.",
+        )
+
+    in_cart = await db.execute(
+        select(func.count(CartItemModel.id)).where(CartItemModel.movie_id == movie_id)
+    )
+    if in_cart.scalar_one() > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This movie is in a cart and cannot be deleted.",
         )
 
     await db.delete(movie)

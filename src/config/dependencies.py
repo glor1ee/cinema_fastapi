@@ -25,6 +25,8 @@ def get_jwt_auth_manager(
         secret_key_access=settings.SECRET_KEY_ACCESS,
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
         algorithm=settings.JWT_SIGNING_ALGORITHM,
+        access_token_minutes=settings.ACCESS_TOKEN_TTL_MINUTES,
+        refresh_token_minutes=settings.LOGIN_TIME_DAYS * 24 * 60,
     )
 
 

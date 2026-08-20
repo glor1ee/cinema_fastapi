@@ -1,9 +1,9 @@
 from celery import Celery
 from celery.schedules import crontab
 
-from config.settings import Settings
+from config import get_settings
 
-settings = Settings()
+settings = get_settings()
 
 celery_app = Celery(
     "online_cinema",

@@ -4,6 +4,8 @@ import pytest
 from sqlalchemy import select
 
 from database import (
+    CartItemModel,
+    CartModel,
     CertificationModel,
     GenreModel,
     MovieModel,
@@ -351,7 +353,9 @@ async def test_purchased_movie_cannot_be_deleted(client, db_session, seed_user_g
     moderator = await _make_user(db_session, "mod@example.com", group=UserGroupEnum.MODERATOR)
     movie = await _seed_movie(db_session)
 
-    paid_order = OrderModel(user_id=moderator.id, status=OrderStatusEnum.PAID)
+    paid_order = OrderModel(
+        user_id=moderator.id, status=OrderStatusEnum.PAID, total_amount=movie.price
+    )
     db_session.add(paid_order)
     await db_session.flush()
     db_session.add(
@@ -363,7 +367,48 @@ async def test_purchased_movie_cannot_be_deleted(client, db_session, seed_user_g
     response = await client.delete(f"{MOVIES_URL}{movie.id}/", headers=headers)
 
     assert response.status_code == 400
-    assert "already been purchased" in response.json()["detail"]
+    assert "part of an order" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_pending_order_also_blocks_deletion(client, db_session, seed_user_groups):
+    moderator = await _make_user(db_session, "mod2@example.com", group=UserGroupEnum.MODERATOR)
+    movie = await _seed_movie(db_session)
+
+    pending_order = OrderModel(
+        user_id=moderator.id, status=OrderStatusEnum.PENDING, total_amount=movie.price
+    )
+    db_session.add(pending_order)
+    await db_session.flush()
+    db_session.add(
+        OrderItemModel(order_id=pending_order.id, movie_id=movie.id, price_at_order=movie.price)
+    )
+    await db_session.commit()
+
+    headers = await _auth_headers(client, "mod2@example.com")
+    response = await client.delete(f"{MOVIES_URL}{movie.id}/", headers=headers)
+
+    assert response.status_code == 400
+    assert "part of an order" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_movie_in_a_cart_cannot_be_deleted(client, db_session, seed_user_groups):
+    buyer = await _make_user(db_session, "buyer2@example.com")
+    await _make_user(db_session, "mod3@example.com", group=UserGroupEnum.MODERATOR)
+    movie = await _seed_movie(db_session)
+
+    cart = CartModel(user_id=buyer.id)
+    db_session.add(cart)
+    await db_session.flush()
+    db_session.add(CartItemModel(cart_id=cart.id, movie_id=movie.id))
+    await db_session.commit()
+
+    headers = await _auth_headers(client, "mod3@example.com")
+    response = await client.delete(f"{MOVIES_URL}{movie.id}/", headers=headers)
+
+    assert response.status_code == 400
+    assert "in a cart" in response.json()["detail"]
 
 
 @pytest.mark.asyncio

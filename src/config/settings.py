@@ -13,6 +13,7 @@ class BaseAppSettings(BaseSettings):
     ACTIVATION_TOKEN_TTL_HOURS: int = 24
     PASSWORD_RESET_TOKEN_TTL_HOURS: int = 1
     LOGIN_TIME_DAYS: int = 7
+    ACCESS_TOKEN_TTL_MINUTES: int = 30
 
     PATH_TO_EMAIL_TEMPLATES_DIR: str = str(BASE_DIR / "notifications" / "templates")
     ACTIVATION_EMAIL_TEMPLATE_NAME: str = "activation_request.html"
@@ -46,8 +47,8 @@ class Settings(BaseAppSettings):
     POSTGRES_DB_PORT: int = int(os.getenv("POSTGRES_DB_PORT", 5432))
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "cinema_db")
 
-    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", os.urandom(32).hex())
-    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", os.urandom(32).hex())
+    SECRET_KEY_ACCESS: str
+    SECRET_KEY_REFRESH: str
 
 
 class TestingSettings(BaseAppSettings):

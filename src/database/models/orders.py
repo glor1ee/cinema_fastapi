@@ -37,7 +37,7 @@ class OrderModel(Base):
         nullable=False,
         index=True,
     )
-    total_amount: Mapped[Decimal | None] = mapped_column(DECIMAL(10, 2), nullable=True)
+    total_amount: Mapped[Decimal] = mapped_column(DECIMAL(10, 2), nullable=False)
 
     user: Mapped["UserModel"] = relationship("UserModel")
     items: Mapped[list["OrderItemModel"]] = relationship(
