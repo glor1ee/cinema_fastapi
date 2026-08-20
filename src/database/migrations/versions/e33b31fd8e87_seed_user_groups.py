@@ -8,7 +8,6 @@ Create Date: 2026-08-20 12:00:00.000000
 from typing import Sequence, Union
 
 from alembic import op
-import sqlalchemy as sa
 
 
 revision: str = 'e33b31fd8e87'
@@ -17,15 +16,9 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-user_groups_table = sa.table(
-    'user_groups',
-    sa.column('name', sa.String),
-)
-
-
 def upgrade() -> None:
-    op.bulk_insert(user_groups_table, [{'name': 'user'}, {'name': 'moderator'}, {'name': 'admin'}])
+    op.execute("INSERT INTO user_groups (name) VALUES ('user'), ('moderator'), ('admin')")
 
 
 def downgrade() -> None:
-    op.execute(user_groups_table.delete().where(user_groups_table.c.name.in_(['user', 'moderator', 'admin'])))
+    op.execute("DELETE FROM user_groups WHERE name IN ('user', 'moderator', 'admin')")
