@@ -17,8 +17,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.execute("INSERT INTO user_groups (name) VALUES ('user'), ('moderator'), ('admin')")
+    op.execute("INSERT INTO user_groups (name) VALUES ('USER'), ('MODERATOR'), ('ADMIN')")
 
 
 def downgrade() -> None:
-    op.execute("DELETE FROM user_groups WHERE name IN ('user', 'moderator', 'admin')")
+    op.execute("DELETE FROM user_groups WHERE name IN ('USER', 'MODERATOR', 'ADMIN')")
