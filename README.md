@@ -23,6 +23,36 @@ Eight functions were selected from the Online Cinema specification.
 FastAPI · Pydantic v2 · SQLAlchemy 2.0 (async) · PostgreSQL · Alembic ·
 Celery + Redis · Poetry · pytest + pytest-cov · Docker Compose
 
+## Live deployment
+
+Running on AWS EC2, deployed automatically by `.github/workflows/cd.yml` on
+every push to `main`.
+
+- API — `http://13.48.65.100:8001`
+- Swagger — `http://13.48.65.100:8001/docs`
+- ReDoc — `http://13.48.65.100:8001/redoc`
+- Health check — `http://13.48.65.100:8001/health/`
+
+`/docs`, `/redoc` and `/openapi.json` are behind HTTP Basic Auth:
+
+| Username | Password |
+|----------|----------|
+| `docs` | `1Yrt6THB80ofDgR4UMOSA` |
+
+A pre-activated admin account for testing role-gated endpoints
+(`PATCH /users/{id}/group/`, movie CRUD, `/admin/orders/`):
+
+```json
+{ "email": "admin@cinema.com", "password": "CinemaAdmin2026!" }
+```
+
+`POST /api/v1/accounts/login/` with that body returns an access/refresh token
+pair — put the access token in `Authorization: Bearer <token>` for any
+signed-in or admin-only route. Swagger itself has no Authorize button (the
+token is read from a plain header, not an OAuth2/HTTPBearer security scheme),
+so admin routes need curl, Postman, or a browser extension that can set
+custom headers.
+
 ## Running the project
 
 ### Docker Compose
